@@ -16,7 +16,6 @@ fn main() -> io::Result<()> {
     // creating the buffer of the size 1504 bytes(maximum Ethernet frame size without CRC) to store the data.
     let mut buf = [0u8; 1504];
 
-
     // Loop for continuous receive data from the interface
     loop {
         // receive data from the TUN interface and store the number of bytes in the `nbytes`.
