@@ -1,10 +1,10 @@
 use std::io;
 
-/// We are going to create the user space TCP stack.
-/// We have to bypass all the operating system built-in TCP stack to directly receive and process
+/// Going to create the user space TCP stack.
+/// Got ot bypass all the operating system built-in TCP stack to directly receive and process
 /// the raw packets from the internet.
 /// 
-/// 1st: we are going to set up the virtual network interface. 
+/// 1st: Goin to set up the virtual network interface. 
 /// We employ the TUN(network) - it is the virtual(software based) network interface that exists in
 /// the operating systems kernel.
 /// It operates on Layer 3 of the OSI model and expose the file descriptor to any application that
