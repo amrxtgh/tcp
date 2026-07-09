@@ -9,15 +9,26 @@ use std::io;
 fn main() -> io::Result<()> {
     // Creating the new TUN interface named "tun0" in TUN mode.
     let nic = tun_tap::Iface::new("tun0", tun_tap::Mode::Tun)?;
-
     // creating the buffer of the size 1504 bytes(maximum Ethernet frame size without CRC) to store the data.
     let mut buf = [0u8; 1504];
-    
+
     // Loop for continuous receive data from the interface
     loop {
         // receive data from the TUN interface and store the number of bytes in the `nbytes.
         let nbytes = nic.recv(&mut buf[..])?;
-        eprintln!("read {} bytes: {:x?}", nbytes, &buf[..nbytes]);
+        let flags = u16::from_be_bytes([buf[0], buf[1]]);
+        let proto = u16::from_be_bytes([buf[2], buf[3]]);
+        if proto != 0x0800 {
+            // If the protocol is not IPv4, skip the packet.
+            continue;
+        }
+        eprintln!(
+            "read {} bytes (flags: {:x?}, proto: {:x?}: {:x?})",
+            nbytes - 4,
+            flags,
+            proto,
+            &buf[4..nbytes]
+        );
     }
     Ok(())
 }
