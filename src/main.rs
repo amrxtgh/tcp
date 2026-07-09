@@ -13,24 +13,26 @@ fn main() -> io::Result<()> {
     // creating the buffer of the size 1504 bytes(maximum Ethernet frame size without CRC) to store the data.
     let mut buf = [0u8; 1504];
 
-    // Loop for continuous receive data from the interface
     loop {
-        // receive data from the TUN interface and store the number of bytes in the `nbytes.
         let nbytes = nic.recv(&mut buf[..])?;
-        let flags = u16::from_be_bytes([buf[0], buf[1]]);
-        let proto = u16::from_be_bytes([buf[2], buf[3]]);
-        if proto != 0x0800 {
+
+        let eth_flags = u16::from_be_bytes([buf[0], buf[1]]);
+        let eth_proto = u16::from_be_bytes([buf[2], buf[3]]);
+        if eth_proto != 0x0800 {
             // If the protocol is not IPv4, skip the packet.
             continue;
         }
         match etherparse::Ipv4HeaderSlice::from_slice(&buf[4..nbytes]) {
             Ok(ipv4) => {
+                let src = ipv4.source_addr();
+                let dst = ipv4.destination_addr();
+                let proto = ipv4.protocol();
                 eprintln!(
-                    "read {} bytes (flags: {:x?}, proto: {:x?}: {:?})",
-                    nbytes - 4,
-                    flags,
+                    "{} -> {} {:?}bytes of protocol {:x?}",
+                    src,
+                    dst,
+                    ipv4.payload_len(),
                     proto,
-                    ipv4
                 );
             }
             Err(e) => {
