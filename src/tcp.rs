@@ -1,1 +1,5 @@
-struct TcpState {}
+pub enum State {
+    Listen,
+    SynRcvd,
+    Estab,
+}
