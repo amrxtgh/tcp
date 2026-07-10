@@ -45,6 +45,11 @@ fn main() -> io::Result<()> {
                 match etherparse::TcpHeaderSlice::from_slice(&buf[4 + ipv4h.slice().len()..nbytes])
                 {
                     Ok(tcp) => {
+                        let datai = 4 + ipv4h.slice().len() + tcp.slice().len();
+                        connections.entry(Quad {
+                            src: (src, tcp.source_port()),
+                            dst: (dst, tcp.destination_port()),
+                        }).or_default();
                         eprintln!(
                             "{} -> {} {}b of tcp to port {}",
                             src,
