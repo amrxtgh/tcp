@@ -1,6 +1,13 @@
 use std::io;
-
+use std::net::Ipv4Addr;
 use etherparse::IpNumber;
+
+mod tcp;
+
+struct Quad {
+    src: (Ipv4Addr, u16),
+    dst: (Ipv4Addr, u16),
+}
 
 /// Creating the user space TCP stack.
 /// Bypassing all the operating system built-in TCP stack to directly receive and process the raw packets from the internet.
@@ -24,15 +31,15 @@ fn main() -> io::Result<()> {
             continue;
         }
         match etherparse::Ipv4HeaderSlice::from_slice(&buf[4..nbytes]) {
-            Ok(ipv4) => {
-                let src = ipv4.source_addr();
-                let dst = ipv4.destination_addr();
-                let proto = ipv4.protocol();
+            Ok(ipv4h) => {
+                let src = ipv4h.source_addr();
+                let dst = ipv4h.destination_addr();
+                let proto = ipv4h.protocol();
                 if proto != IpNumber::TCP.into() {
                     // If not TCP, skip the packet
                     continue;
                 }
-                match etherparse::TcpHeaderSlice::from_slice(&buf[4 + ipv4.slice().len()..nbytes]) {
+                match etherparse::TcpHeaderSlice::from_slice(&buf[4 + ipv4h.slice().len()..nbytes]) {
                     Ok(tcp) => {
                         eprintln!(
                             "{} -> {} {}b of tcp to port {}",
