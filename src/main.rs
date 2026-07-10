@@ -1,9 +1,11 @@
+use etherparse::IpNumber;
+use std::collections::HashMap;
 use std::io;
 use std::net::Ipv4Addr;
-use etherparse::IpNumber;
 
 mod tcp;
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 struct Quad {
     src: (Ipv4Addr, u16),
     dst: (Ipv4Addr, u16),
@@ -15,6 +17,7 @@ struct Quad {
 /// We employ the TUN(network) - it is the virtual(software based) network interface that exists in the operating systems kernel.
 /// It operates on Layer 3 of the OSI model and expose the file descriptor to any application that need to send or receive packets.
 fn main() -> io::Result<()> {
+    let mut connections: HashMap<Quad, tcp::State> = Default::default();
     // Creating the new TUN interface named "tun0" in TUN mode.
     let nic = tun_tap::Iface::new("tun0", tun_tap::Mode::Tun)?;
 
@@ -39,7 +42,8 @@ fn main() -> io::Result<()> {
                     // If not TCP, skip the packet
                     continue;
                 }
-                match etherparse::TcpHeaderSlice::from_slice(&buf[4 + ipv4h.slice().len()..nbytes]) {
+                match etherparse::TcpHeaderSlice::from_slice(&buf[4 + ipv4h.slice().len()..nbytes])
+                {
                     Ok(tcp) => {
                         eprintln!(
                             "{} -> {} {}b of tcp to port {}",
