@@ -22,13 +22,13 @@ fn main() -> io::Result<()> {
     let nic = tun_tap::Iface::new("tun0", tun_tap::Mode::Tun)?;
 
     // creating the buffer of the size 1504 bytes(maximum Ethernet frame size without CRC) to store the data.
-    let mut buf = [0u8; 1504];
+    let mut buf: [u8; 1504] = [0u8; 1504];
 
     loop {
         let nbytes = nic.recv(&mut buf[..])?;
 
         // let _eth_flags = u16::from_be_bytes([buf[0], buf[1]]);
-        let eth_proto = u16::from_be_bytes([buf[2], buf[3]]);
+        let eth_proto: u16 = u16::from_be_bytes([buf[2], buf[3]]);
         if eth_proto != 0x0800 {
             // If the protocol is not IPv4, skip the packet.
             continue;
@@ -46,17 +46,13 @@ fn main() -> io::Result<()> {
                 {
                     Ok(tcp) => {
                         let datai = 4 + ipv4h.slice().len() + tcp.slice().len();
-                        connections.entry(Quad {
-                            src: (src, tcp.source_port()),
-                            dst: (dst, tcp.destination_port()),
-                        }).or_default();
-                        eprintln!(
-                            "{} -> {} {}b of tcp to port {}",
-                            src,
-                            dst,
-                            tcp.slice().len(),
-                            tcp.destination_port()
-                        );
+                        connections
+                            .entry(Quad {
+                                src: (src, tcp.source_port()),
+                                dst: (dst, tcp.destination_port()),
+                            })
+                            .or_default()
+                            .on_packet(ipv4h, tcp, &buf[datai..nbytes]);
                     }
                     Err(e) => eprintln!("Error parsing TCP header: {:?}", e),
                 }
