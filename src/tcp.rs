@@ -1,6 +1,6 @@
 use etherparse::Ethernet2Header;
 
-#[derive(Default)]
+#[Default]
 pub enum State {
     Closed,
     Listen,
@@ -26,6 +26,7 @@ impl State {
             }
             State::Listen => {
                 if !tcph.syn() {
+                    // only expected SYN packet
                     return;
                 }
                 let seq = 0;
