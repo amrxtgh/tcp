@@ -1,6 +1,5 @@
-use etherparse::Ethernet2Header;
+use etherparse::IpNumber;
 
-#[Default]
 pub enum State {
     Closed,
     Listen,
@@ -8,18 +7,21 @@ pub enum State {
     Estab,
 }
 
-//impl Default for State {
-//    fn default() -> Self {
-//        State {}
-//    }
-//}
+impl Default for State {
+    fn default() -> Self {
+        State::Closed
+    }
+}
+
 impl State {
     pub fn on_packet<'a>(
         &mut self,
+        nic: &mut tun_tap::Iface,
         ipv4h: etherparse::Ipv4HeaderSlice<'a>,
         tcph: etherparse::TcpHeaderSlice<'a>,
         data: &'a [u8],
     ) {
+        let mut buf = [0u8; 1500];
         match *self {
             State::Closed => {
                 return;
@@ -30,31 +32,33 @@ impl State {
                     return;
                 }
                 let seq = 0;
-                let ack = tcph.sequence_number().wrapping_add(1) as u16;
+                let ack = tcph.sequence_number().wrapping_add(1);
                 let mut syn_ack = etherparse::TcpHeader::new(
                     tcph.destination_port(),
                     tcph.source_port(),
                     seq,
-                    ack,
+                    1500,
                 );
                 syn_ack.syn = true;
                 syn_ack.ack = true;
+                syn_ack.acknowledgment_number = ack;
+                let tcp_len = syn_ack.header_len();
                 let mut ip = etherparse::Ipv4Header::new(
-                    syn_ack.slice().len(),
+                    tcp_len as u16,
                     64,
-                    etherparse::IpTrafficClass::TCP,
-                    ipv4h.destination_addr(),
-                    ipv4h.source_addr(),
-                );
+                    IpNumber::TCP,
+                    ipv4h.destination_addr().octets(),
+                    ipv4h.source_addr().octets(),
+                )
+                .unwrap();
+                ip.header_checksum = ip.calc_header_checksum();
+                let mut unwritten = &mut buf[..];
+                ip.write(&mut unwritten).unwrap();
+                syn_ack.write(&mut unwritten).unwrap();
+                let written = 1500 - unwritten.len();
+                nic.send(&buf[..written]).unwrap();
             }
+            _ => {}
         }
-        eprintln!(
-            "{}: {} -> {}:{} {}b of tcp",
-            ipv4h.source_addr(),
-            tcph.source_port(),
-            ipv4h.destination_addr(),
-            tcph.destination_port(),
-            data.len(),
-        )
     }
 }
