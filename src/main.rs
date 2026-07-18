@@ -19,7 +19,7 @@ struct Quad {
 fn main() -> io::Result<()> {
     let mut connections: HashMap<Quad, tcp::State> = Default::default();
     // Creating the new TUN interface named "tun0" in TUN mode.
-    let nic = tun_tap::Iface::new("tun0", tun_tap::Mode::Tun)?;
+    let mut nic = tun_tap::Iface::new("tun0", tun_tap::Mode::Tun)?;
 
     // creating the buffer of the size 1504 bytes(maximum Ethernet frame size without CRC) to store the data.
     let mut buf: [u8; 1504] = [0u8; 1504];
@@ -38,7 +38,7 @@ fn main() -> io::Result<()> {
                 let src = ipv4h.source_addr();
                 let dst = ipv4h.destination_addr();
                 let proto = ipv4h.protocol();
-                if proto != IpNumber::TCP.into() {
+                if proto != IpNumber::TCP {
                     // If not TCP, skip the packet
                     continue;
                 }
@@ -52,12 +52,12 @@ fn main() -> io::Result<()> {
                                 dst: (dst, tcp.destination_port()),
                             })
                             .or_default()
-                            .on_packet(ipv4h, tcp, &buf[datai..nbytes]);
+                            .on_packet(&mut nic, ipv4h, tcp, &buf[datai..nbytes]);
                     }
                     Err(e) => eprintln!("Error parsing TCP header: {:?}", e),
                 }
             }
-            Err(e) => eprintln!("Error parsing IPv4 header: {:?}", e),
+            Err(e) => eprintln!("Error parsing the Ipv4 header : {:?}", e),
         }
     }
 }
